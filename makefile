@@ -4,13 +4,13 @@ OBJ = ./obj
 BIN = ./bin
 LIB = /lib/security
 
-all: mypam.so test
+all: pam_hmac.so test
 
-mypam.o: $(SRC)/mypam.c obj
-	gcc -fPIC -fno-stack-protector -c $(SRC)/mypam.c -o $(OBJ)/mypam.o
+pam_hmac.o: $(SRC)/pam_hmac.c obj
+	gcc -fPIC -fno-stack-protector -c $(SRC)/pam_hmac.c -o $(OBJ)/pam_hmac.o
 
-mypam.so: mypam.o obj bin
-	sudo ld -x --shared -o $(BIN)/mypam.so $(OBJ)/mypam.o
+pam_hmac.so: pam_hmac.o obj bin
+	sudo ld -x --shared -o $(BIN)/pam_hmac.so $(OBJ)/pam_hmac.o
 
 test: $(SRC)/test.c bin
 	g++ -o $(BIN)/test $(SRC)/test.c -lpam -lpam_misc
@@ -25,4 +25,4 @@ clean:
 	rm -rf $(OBJ) $(BIN)
 
 install:
-	cp $(BIN)/mypam.so $(LIB)/mypam.so
+	cp $(BIN)/pam_hmac.so $(LIB)/pam_hmac.so
