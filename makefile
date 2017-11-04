@@ -3,10 +3,10 @@ SRC = ./src
 BIN = ./bin
 LIB = /lib/security
 
-all: pam_hmac.so
+all: pam_naumotp.so
 
-pam_hmac.so: $(SRC)/pam_hmac.c bin
-	gcc -fPIC -shared $(SRC)/pam_hmac.c -o $(BIN)/pam_hmac.so -lpam -lcrypto
+pam_naumotp.so: $(SRC)/pam_naumotp.c bin
+	gcc -fPIC -shared $(SRC)/pam_naumotp.c -o $(BIN)/pam_naumotp.so -lpam -lcrypto
 
 bin:
 	mkdir -p $(BIN)
@@ -18,4 +18,4 @@ clean:
 	rm -rf $(BIN)
 
 install: lib
-	cp $(BIN)/pam_hmac.so $(LIB)/pam_hmac.so
+	cp $(BIN)/pam_naumotp.so $(LIB)/pam_naumotp.so

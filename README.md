@@ -1,65 +1,50 @@
-Intro
-=====
+Naum OTP PAM
+============
 
-This is just a simple PAM module and test code for it. There really isn't much to it, but it does make a good example of how to get started with a PAM module.
+This module was provides one-time-password authetication based on HMAC-SHA256 with a shared secret.
 
-To build, either use the build scripts or use these commands:
+It was built as a simple anti-sniffing measure for a challenge on the [Naumachia](https://github.com/nategraf/naumachia) platform, but may be useful to you as an example and/or starting point to writing a PAM module yourself.
 
-**Build the PAM module**
+Usage
+-----
 
-`gcc -fPIC -fno-stack-protector -c src/mypam.c`
+**Build**
 
-`sudo ld -x --shared -o /lib/security/mypam.so mypam.o`
+Use `make` to build the module and `make install` to put it in your` /lib/security` directory
 
-The first command builds the object file in the current directory and the second links it with PAM. Since it's a shared library, PAM can use it on the fly without having to restart.
+The module needs to be build as a shared object file, linked with the pam library, and to use HMAC openssl.
+This command does that: `gcc -fPIC -shared src/pam_hmac.c -o bin/pam_hmac.so -lpam -lcrypto`
 
-**Build Test**
+**Install**
 
-`g++ -o pam_test src/test.c -lpam -lpam_misc`
+This built shared-object file needs to be placed in `/lib/security` and an entry must be added to the appropriate config in `/etc/pam.d`
 
-OR
+The [common-auth](./common-auth) file provides and example of how to enable this module in `/etc/pam.d/common-auth` (such that it is used for all password-based authentication)
+Notice that the `pam_naumotp.so` line is place after `pam_permit.so` and `pam_deny.so`
+Also notice that `debug`is specified as an aurgument. This is only for testing.
 
-`gcc -o pam_test src/test.c -lpam -lpam_misc`
+**Test / Experiment**
 
-The test program is valid C, so it could be compiled using gcc or g++. I like g++ better because I'll probably want to extend it and I like C++ better.
+To test and experitment with the module without locking myself out of my computer I created a `Dockerfile`
+With Docker installed, use `docker build -t naumotp-test` to build and `docker run --rm -it naumotp-test bash` to run
 
-Simple Usage
-------------
+In the container shell run `login` (or another pam application)
+If it works, you will be prompted for your username and password, then the HMAC challenge-response
 
-The build scripts will take care of putting your module where it needs to be, `/lib/security`, so the next thing to do is edit config files.
+Use the user "noob" with password "noob" and as configured in the Dockerfile
 
-The config files are located in `/etc/pam.d/` and the one I edited was `/etc/pam.d/common-auth`.
 
-The test application tests auth and account functionality (although account isn't very interesting). At the top of the pam file (or anywhere), put these lines:
+How I learned to Write this module
+----------------------------------
+I started by looking at [beatgammit's simple-pam repo](https://github.com/beatgammit/simple-pam) and this gave me a starting point.
+I leaned more heavily on the work of [Ben Servos]((http://ben.akrin.com/?p=1068) as it contained conversation code
+This post helped me understand how to use [OpenSSL HMAC](http://www.askyb.com/cpp/openssl-hmac-hasing-example-in-cpp/)
 
-	auth sufficient mypam.so
-	account sufficient mypam.so
-
-I think the account part should technically go in `/etc/pam.d/common-account`, but I put mine in the same place so I'd remember to take them out later.
-
-To run the test program, just do: `pam_test backdoor` and you should get some messages saying that you're authenticated! Maybe this is how Sam Flynn 'hacked' his father's computer in TRON Legacy =D.
-
-Resources
-=========
-
-I found these resources especially helpful:
-
-O'Reilly Guides:
-----------------
-
-These guides give brief overviews about PAM and how to write modules.  This is useful if you already have a little knowledge.
-
+These guides are useful (again origonal found with the help fo beatgammit):
 * [Writing PAM Modules, Part One](http://linuxdevcenter.com/pub/a/linux/2002/05/02/pam_modules.html)
 * [Writing PAM Modules, Part Two](http://linuxdevcenter.com/pub/a/linux/2002/05/23/pam_modules.html)
 * [Writing PAM Modules, Part Three](http://linuxdevcenter.com/pub/a/linux/2002/05/30/pam_modules.html)
 
-Others
-------
-
-Good example for simple authentication.  I adapted this one in my simple PAM module.
-
-[2-factor authentication & writing PAM modules](http://ben.akrin.com/?p=1068)
-
-Gives an example program that uses PAM. I adapted this for testing my PAM module.
-
-[Example PAM application](http://www.kernel.org/pub/linux/libs/pam/Linux-PAM-html/adg-example.html)
+And of course there is no replacement for reading the docs:
+ * [Linux-PAM Module Developer's Guide](http://www.linux-pam.org/Linux-PAM-html/Linux-PAM_MWG.html)
+ * [OpenSSL HMAC](https://wiki.openssl.org/index.php/Manual:Hmac(3))

@@ -18,4 +18,4 @@ RUN apt-get -y remove automake build-essential && \
 
 RUN useradd -Um noob && printf "noob\nnoob" | passwd noob
 COPY ./common-auth /etc/pam.d/
-COPY ./hmac_secret /home/noob/.hmac_secret
+COPY ./naumotp_secret /home/noob/.naumotp_secret

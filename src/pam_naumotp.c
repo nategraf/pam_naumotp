@@ -15,7 +15,7 @@
 
 // Number of bytes in the challenge
 #define CHAL_LEN 8
-#define SECRET_PATH_FORMAT "/home/%s/.hmac_secret"
+#define SECRET_PATH_FORMAT "/home/%s/.naumotp_secret"
 
 void bytes_to_hex( unsigned char *data, unsigned int len, char *buf ) {
     int i ;
@@ -83,7 +83,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags, int argc, con
             if( strncmp("debug", arg, 5) == 0 ) {
                 debug = 1 ;
                 setlogmask( LOG_UPTO (LOG_DEBUG) ) ;
-                openlog( "pam_hmac", LOG_PERROR, LOG_AUTH ) ;
+                openlog( "pam_naumotp", LOG_PERROR, LOG_AUTH ) ;
             }
         }
 
