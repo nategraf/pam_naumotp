@@ -20,7 +20,7 @@ This command does that: `gcc -fPIC -shared src/pam_hmac.c -o bin/pam_hmac.so -lp
 
 This built shared-object file needs to be placed in `/lib/security` and an entry must be added to the appropriate config in `/etc/pam.d`
 
-The [common-auth](./common-auth) file provides and example of how to enable this module in `/etc/pam.d/common-auth` (such that it is used for all password-based authentication)
+The [common-auth](./test/common-auth) file provides and example of how to enable this module in `/etc/pam.d/common-auth` (such that it is used for all password-based authentication)
 
 Notice that the `pam_naumotp.so` line is place after `pam_permit.so` and `pam_deny.so`. Also notice that `debug`is specified as an aurgument. This is only for testing.
 
