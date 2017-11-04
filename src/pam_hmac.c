@@ -1,15 +1,17 @@
-/*******************************************************************************
- * file:        2ndfactor.c
- * author:      ben servoz
- * description: PAM module to provide 2nd factor authentication
- * notes:       instructions at http://ben.akrin.com/?p=1068
-*******************************************************************************/
+/************************************************************************************
+ * file:        pam_hamc.c
+ * author:      nate graf based on the work of ben servoz
+ * description: PAM module to provide HMAC challenge response based symetric key auth
+************************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <curl/curl.h>
+#include <openssl/hmac.h>
 #include <security/pam_appl.h>
 #include <security/pam_modules.h>
+
+// Number of hex chars in the challenge
+#define CHAL_LEN 16
 
 /* expected hook */
 PAM_EXTERN int pam_sm_setcred( pam_handle_t *pamh, int flags, int argc, const char **argv ) {
@@ -38,68 +40,35 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
     
 	/* these guys will be used by converse() */
 	char *input ;
-	struct pam_message msg[1],*pmsg[1];
+	struct pam_message msg[1], *pmsg[1];
 	struct pam_response *resp;
 	
-	/* retrieving parameters */
-	int got_base_url  = 0 ;
-	int got_code_size = 0 ;
-	unsigned int code_size = 0 ;
-	char base_url[256] ;
-	for( i=0 ; i<argc ; i++ ) {
-		if( strncmp(argv[i], "base_url=", 9)==0 ) {
-			strncpy( base_url, argv[i]+9, 256 ) ;
-			got_base_url = 1 ;
-		} else if( strncmp(argv[i], "code_size=", 10)==0 ) {
-			char temp[256] ;
-			strncpy( temp, argv[i]+10, 256 ) ;
-			code_size = atoi( temp ) ;
-			got_code_size = 1 ;
-		}
-	}
-	if( got_base_url==0 || got_code_size==0 ) {
-		return PAM_AUTH_ERR ;
-	}
 
 	/* getting the username that was used in the previous authentication */
 	const char *username ;
-    	if( (retval = pam_get_user(pamh,&username,"login: "))!=PAM_SUCCESS ) {
+    	if((retval = pam_get_user(pamh, &username, "login: ")) != PAM_SUCCESS) {
 		return retval ;
 	}
 
-	/* generating a random one-time code */
-	char code[code_size+1] ;
-  	unsigned int random_number ;
+	/* generating a random one-time chal */
+	char chal[CHAL_LEN+1] ;
+  	unsigned long random_number ;
 	FILE *urandom = fopen( "/dev/urandom", "r" ) ;
 	fread( &random_number, sizeof(random_number), 1, urandom ) ;
 	fclose( urandom ) ;
-	snprintf( code, code_size+1,"%u", random_number ) ;
-	code[code_size] = 0 ; // because it needs to be null terminated
 
-	/* building URL */
-	char url_with_params[strlen(base_url) + strlen("?username=") + strlen(username) + strlen("&code=") + code_size] ;
-	strcpy( url_with_params, base_url ) ;
-	strcat( url_with_params, "?username=" ) ;
-	strcat( url_with_params, username ) ;
-	strcat( url_with_params, "&code=" ) ;
-	strcat( url_with_params, code ) ;
+	snprintf( chal, CHAL_LEN+1,"%016lx", random_number ) ;
+	chal[CHAL_LEN] = '\0' ; // because it needs to be null terminated
 
-	/* HTTP request to service that will dispatch the code */
-	CURL *curl ;
-	CURLcode res;
-	curl = curl_easy_init() ;
-	if( curl ) {
-		curl_easy_setopt( curl, CURLOPT_URL, url_with_params ) ;
-		res = curl_easy_perform( curl ) ;
-		curl_easy_cleanup( curl ) ;
-	}
-
-	/* setting up conversation call prompting for one-time code */
+	/* setting up conversation call prompting for one-time chal */
+        char prompt[23 + CHAL_LEN + 1] ;
 	pmsg[0] = &msg[0] ;
 	msg[0].msg_style = PAM_PROMPT_ECHO_ON ;
-	msg[0].msg = "1-time code: " ;
+        msg[0].msg = prompt ;
+	snprintf(prompt, 23 + CHAL_LEN + 1, "challenge [%s]\nresponse: ", chal) ;
+
 	resp = NULL ;
-	if( (retval = converse(pamh, 1 , pmsg, &resp))!=PAM_SUCCESS ) {
+	if((retval = converse(pamh, 1, pmsg, &resp)) != PAM_SUCCESS) {
 		// if this function fails, make sure that ChallengeResponseAuthentication in sshd_config is set to yes
 		return retval ;
 	}
@@ -116,13 +85,13 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
 		return PAM_CONV_ERR;
 	}
 	
-	/* comparing user input with known code */
-	if( strcmp(input, code)==0 ) {
+	/* comparing user input with known chal */
+	if(strcmp(input, chal) == 0) {
 		/* good to go! */
 		free( input ) ;
 		return PAM_SUCCESS ;
 	} else {
-		/* wrong code */
+		/* wrong resp */
 		free( input ) ;
 		return PAM_AUTH_ERR ;
 	}

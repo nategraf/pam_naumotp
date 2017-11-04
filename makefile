@@ -7,7 +7,7 @@ LIB = /lib/security
 all: pam_hmac.so test
 
 pam_hmac.o: $(SRC)/pam_hmac.c obj
-	gcc -fPIC -fno-stack-protector -c $(SRC)/pam_hmac.c -o $(OBJ)/pam_hmac.o
+	gcc -fPIC -c $(SRC)/pam_hmac.c -o $(OBJ)/pam_hmac.o -lcrypto
 
 pam_hmac.so: pam_hmac.o obj bin
 	sudo ld -x --shared -o $(BIN)/pam_hmac.so $(OBJ)/pam_hmac.o
