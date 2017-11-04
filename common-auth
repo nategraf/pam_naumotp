@@ -1,6 +1,6 @@
-auth    [success=1 default=ignore]      pam_unix.so nullok_secure
+auth    [success=1 default=ignore]      pam_unix.so nullok_secure debug
 
-auth    requisite                       pam_deny.so
-auth    required                        pam_permit.so
+auth    requisite                       pam_deny.so debug
+auth    required                        pam_permit.so debug
 
 auth    required                        pam_hmac.so debug
