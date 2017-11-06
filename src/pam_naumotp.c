@@ -24,7 +24,7 @@ void bytes_to_hex( unsigned char *data, unsigned int len, char *buf ) {
         sprintf(buf + i*2, "%02x", data[i]) ;
     }
 
-    buf[len] = '\0' ;
+    buf[len*2] = '\0' ;
 }
 
 char* read_secret(const char *username) {
@@ -32,7 +32,7 @@ char* read_secret(const char *username) {
     char *path = (char*) malloc(sizeof(char)*path_len) ;
     snprintf(path, path_len, SECRET_PATH_FORMAT, username) ;
 
-    FILE *fp = fopen(path, "r") ;
+    FILE *fp = fopen(path, "rb") ;
     free(path) ;
 
     if (fp != NULL){
@@ -40,9 +40,9 @@ char* read_secret(const char *username) {
         size_t sz = ftell(fp) ;
         rewind(fp) ;
 
-        char *secret = malloc(sizeof(char)*sz + 1) ;
+        char *secret = malloc(sizeof(char)*sz) ;
         size_t rdsz = fread(secret, sizeof(char), sz, fp) ;
-        secret[rdsz] = '\0' ;
+        secret[rdsz-1] = '\0' ; // Overwrite the last char, which is a newline
 
         fclose(fp) ;
         return secret ;
@@ -105,7 +105,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags, int argc, con
 
         /* generating a random one-time challenge */
         char chal_str[CHAL_LEN*2+1] ;
-          unsigned char chal[CHAL_LEN] ;
+        unsigned char chal[CHAL_LEN] ;
 
         FILE *urandom = fopen( "/dev/urandom", "r" ) ;
         fread( &chal, CHAL_LEN, 1, urandom ) ;
@@ -125,7 +125,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags, int argc, con
 
         /* calculate the answer */
         unsigned char ans[EVP_MAX_MD_SIZE] ;
-        unsigned char ans_str[EVP_MAX_MD_SIZE*2 +1] ;
+        unsigned char ans_str[EVP_MAX_MD_SIZE*2 + 1] ;
         unsigned int ans_len ;
         HMAC( EVP_sha256(), secret, strlen(secret), chal, CHAL_LEN, ans, &ans_len ) ;
         free(secret) ;
